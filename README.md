@@ -36,3 +36,18 @@ To run this project locally, follow these steps:
 [git clone https://github.com/YOUR_GITHUB_USERNAME/Women-Safety-App.git
 cd Women-Safety-App](https://github.com/Raj-Aryan-dixit/Women-Safety-Application)
 
+
+###2️⃣ Install Dependencies
+npm install
+
+###3️⃣ Start the Development Server
+npm start
+
+
+###🚀 Usage
+1️⃣ Enable Dark Mode – Click the 🌙/☀️ button to switch between themes.
+2️⃣ Add Emergency Contacts – View predefined emergency contacts for quick access.
+3️⃣ Use the SOS Button – Press SOS to alert your contacts in case of emergency.
+4️⃣ Share Live Location – Send real-time location to trusted contacts.
+5️⃣ Check Safety Tips – Read useful tips to stay safe.
+6️⃣ View Recent Alerts – Get notified about safety incidents near you.
