@@ -6,53 +6,121 @@ import {
   FaUsers,
   FaLightbulb,
 } from "react-icons/fa";
+import axios from "axios";
 
-const SafetyScore = () => {
-  // State for safety score
+const SafetyScore = ({ isDarkMode }) => {
   const [safetyScore, setSafetyScore] = useState(0);
-
-  // State for day/night mode
   const [isDaytime, setIsDaytime] = useState(true);
+  const [criminalRate, setCriminalRate] = useState(0);
+  const [weatherCondition, setWeatherCondition] = useState("sunny");
+  const [crowdDensity, setCrowdDensity] = useState("medium");
+  const [lightingCondition, setLightingCondition] = useState("good");
 
-  // Mock data (replace with real-time API data)
-  const criminalRate = 30; // Example: 30% criminal rate in the area
-  const weatherCondition = "rain"; // Example: "sunny", "rain", "storm"
-  const crowdDensity = "low"; // Example: "low", "medium", "high"
-  const lightingCondition = "poor"; // Example: "good", "poor"
+  // Fetch weather data
+  const fetchWeatherData = async (latitude, longitude) => {
+    try {
+      const response = await axios.get(
+        `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${
+          import.meta.env.VITE_OPENWEATHERMAP_API_KEY
+        }`
+      );
+      const weather = response.data.weather[0].main.toLowerCase();
+      setWeatherCondition(weather);
+    } catch (error) {
+      console.error("Error fetching weather data:", error);
+    }
+  };
+
+  // Fetch crime data
+  const fetchCrimeData = async (latitude, longitude) => {
+    try {
+      const response = await axios.get(
+        `https://api.crimeometer.com/v1/incidents/raw-data?lat=${latitude}&lon=${longitude}&distance=5km`,
+        {
+          headers: {
+            "x-api-key": import.meta.env.VITE_CRIMEOMETER_API_KEY,
+          },
+        }
+      );
+      const crimeCount = response.data.incidents.length;
+      setCriminalRate(crimeCount > 10 ? 30 : 10); // Example logic
+    } catch (error) {
+      console.error("Error fetching crime data:", error);
+    }
+  };
+
+  // Fetch crowd density data
+  const fetchCrowdDensity = async (latitude, longitude) => {
+    try {
+      const response = await axios.get(
+        `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=500&key=${
+          import.meta.env.VITE_GOOGLE_PLACES_API_KEY
+        }`
+      );
+      const places = response.data.results;
+      const density =
+        places.length > 20 ? "high" : places.length > 10 ? "medium" : "low";
+      setCrowdDensity(density);
+    } catch (error) {
+      console.error("Error fetching crowd density:", error);
+    }
+  };
+
+  // Fetch lighting data (mock implementation)
+  const fetchLightingData = async (latitude, longitude) => {
+    // Mock logic: Assume lighting is poor at night
+    const currentHour = new Date().getHours();
+    setLightingCondition(
+      currentHour >= 18 || currentHour < 6 ? "poor" : "good"
+    );
+  };
+
+  // Fetch all data based on user's location
+  const fetchData = async () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          fetchWeatherData(latitude, longitude);
+          fetchCrimeData(latitude, longitude);
+          fetchCrowdDensity(latitude, longitude);
+          fetchLightingData(latitude, longitude);
+        },
+        (error) => {
+          console.error("Error getting location:", error);
+        }
+      );
+    } else {
+      console.error("Geolocation is not supported by this browser.");
+    }
+  };
 
   // Calculate safety score
   useEffect(() => {
     const calculateSafetyScore = () => {
-      // Base score (100 is safest, 0 is least safe)
       let score = 100 - criminalRate;
 
-      // Adjust score based on day/night
       if (!isDaytime) {
-        score -= 20; // Reduce safety score by 20% at night
+        score -= 20;
       }
 
-      // Adjust score based on weather conditions
       if (weatherCondition === "rain") {
-        score -= 10; // Reduce safety score by 10% during rain
+        score -= 10;
       } else if (weatherCondition === "storm") {
-        score -= 20; // Reduce safety score by 20% during storms
+        score -= 20;
       }
 
-      // Adjust score based on crowd density
       if (crowdDensity === "low") {
-        score -= 15; // Reduce safety score by 15% in low-density areas
+        score -= 15;
       } else if (crowdDensity === "medium") {
-        score -= 5; // Reduce safety score by 5% in medium-density areas
+        score -= 5;
       }
 
-      // Adjust score based on lighting conditions
       if (lightingCondition === "poor") {
-        score -= 10; // Reduce safety score by 10% in poorly lit areas
+        score -= 10;
       }
 
-      // Ensure score is within 0-100 range
       score = Math.max(0, Math.min(100, score));
-
       setSafetyScore(score);
     };
 
@@ -68,7 +136,12 @@ const SafetyScore = () => {
   // Determine if it's daytime or nighttime
   useEffect(() => {
     const currentHour = new Date().getHours();
-    setIsDaytime(currentHour >= 6 && currentHour < 18); // Daytime between 6 AM and 6 PM
+    setIsDaytime(currentHour >= 6 && currentHour < 18);
+  }, []);
+
+  // Fetch data on component mount
+  useEffect(() => {
+    fetchData();
   }, []);
 
   // Get safety level based on score
@@ -82,16 +155,24 @@ const SafetyScore = () => {
 
   // Get safety bar color based on score
   const getSafetyBarColor = (score) => {
-    if (score >= 80) return "bg-green-600"; // Very Safe
-    if (score >= 60) return "bg-yellow-600"; // Safe
-    if (score >= 40) return "bg-orange-600"; // Moderate
-    if (score >= 20) return "bg-red-600"; // Risky
-    return "bg-red-800"; // Very Risky
+    if (score >= 80) return "bg-green-600";
+    if (score >= 60) return "bg-yellow-600";
+    if (score >= 40) return "bg-orange-600";
+    if (score >= 20) return "bg-red-600";
+    return "bg-red-800";
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md mb-5">
-      <h2 className="text-2xl font-semibold text-purple-800 mb-4">
+    <div
+      className={`${ 
+        isDarkMode ? "bg-gray-800" : "bg-white"
+      } p-6 rounded-lg shadow-md mb-5 `}
+    >
+      <h2
+        className={`text-2xl font-semibold ${
+          isDarkMode ? "text-purple-400" : "text-purple-800"
+        } mb-4`}
+      >
         Your Safety Score
       </h2>
 
@@ -105,10 +186,18 @@ const SafetyScore = () => {
 
       {/* Safety Score Details */}
       <div className="text-center">
-        <p className="text-4xl font-bold text-purple-800 mb-2">
+        <p
+          className={`text-4xl font-bold ${
+            isDarkMode ? "text-purple-400" : "text-purple-800"
+          } mb-2`}
+        >
           {safetyScore}%
         </p>
-        <p className="text-lg text-purple-700 mb-4">
+        <p
+          className={`text-lg ${
+            isDarkMode ? "text-purple-300" : "text-purple-700"
+          } mb-4`}
+        >
           Safety Level:{" "}
           <span
             className={`font-semibold ${
@@ -124,7 +213,7 @@ const SafetyScore = () => {
             {getSafetyLevel(safetyScore)}
           </span>
         </p>
-        <p className="text-gray-600">
+        <p className={isDarkMode ? "text-purple-300" : "text-gray-600"}>
           {isDaytime ? (
             <span className="flex items-center justify-center">
               <FaSun className="mr-2" /> Daytime
@@ -138,7 +227,11 @@ const SafetyScore = () => {
       </div>
 
       {/* Additional Information */}
-      <div className="mt-6 text-sm text-gray-600">
+      <div
+        className={`mt-6 text-sm ${
+          isDarkMode ? "text-purple-300" : "text-gray-600"
+        }`}
+      >
         <p>Your safety score is calculated based on:</p>
         <ul className="list-disc list-inside mt-2">
           <li>

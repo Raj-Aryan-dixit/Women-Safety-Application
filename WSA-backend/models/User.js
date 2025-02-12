@@ -11,6 +11,7 @@ const userSchema = new mongoose.Schema({
     type: { type: String, default: "Point" },
     coordinates: { type: [Number], default: [0, 0] },
   },
+  profilePicture: { type: String, default: "" }, // ✅ Added profile picture field
 });
 
 // Hash password before saving

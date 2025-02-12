@@ -9,76 +9,77 @@ import {
   FaMoon,
 } from "react-icons/fa";
 
-// EmergencyContacts Component
-const EmergencyContacts = ({ contacts, isDarkMode, onEdit, onDelete }) => {
+const EmergencyContacts = ({
+  contacts,
+  isDarkMode,
+  onEdit,
+  onDelete,
+  emergencyContacts,
+}) => {
   return (
     <div
-      className={`${
-        isDarkMode ? "bg-gray-800" : "bg-white"
-      } p-6 rounded-lg shadow-md`}
+      className={`p-6 rounded-2xl shadow-xl transition-all duration-300 ${
+        isDarkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"
+      }`}
     >
       <h2
-        className={`text-2xl font-semibold ${
-          isDarkMode ? "text-purple-400" : "text-purple-800"
-        } mb-4`}
+        className={`text-3xl font-extrabold mb-6 ${
+          isDarkMode ? "text-purple-400" : "text-purple-700"
+        }`}
       >
         Emergency Contacts
       </h2>
-      <ul className="space-y-2">
-        {contacts.map((contact, index) => (
-          <li
-            key={index}
-            className={`${
-              isDarkMode ? "bg-gray-700" : "bg-gray-100"
-            } p-3 rounded-lg flex justify-between items-center`}
-          >
-            <span
-              className={`font-medium ${
-                isDarkMode ? "text-purple-300" : "text-purple-700"
+      <ul className="space-y-4">
+        {contacts.map((contact, index) => {
+          const isCustomContact = index >= emergencyContacts.length;
+          return (
+            <li
+              key={index}
+              className={`flex justify-between items-center p-4 rounded-xl shadow-md transition-all duration-300 ${
+                isDarkMode
+                  ? "bg-gray-700 hover:bg-gray-600"
+                  : "bg-gray-100 hover:bg-gray-200"
               }`}
             >
-              {contact.name}: {contact.number}
-            </span>
-            <div className="flex space-x-2">
-              <a
-                href={`tel:${contact.number}`}
-                className={`${
-                  isDarkMode
-                    ? "bg-purple-600 hover:bg-purple-700"
-                    : "bg-purple-600 hover:bg-purple-700"
-                } text-white p-2 rounded-lg transition-colors`}
+              <span
+                className={`text-lg font-semibold ${
+                  isDarkMode ? "text-purple-300" : "text-purple-700"
+                }`}
               >
-                <FaPhone />
-              </a>
-              <button
-                onClick={() => onEdit(index)}
-                className={`${
-                  isDarkMode
-                    ? "bg-yellow-500 hover:bg-yellow-600"
-                    : "bg-yellow-500 hover:bg-yellow-600"
-                } text-white p-2 rounded-lg transition-colors`}
-              >
-                <FaEdit />
-              </button>
-              <button
-                onClick={() => onDelete(index)}
-                className={`${
-                  isDarkMode
-                    ? "bg-red-600 hover:bg-red-700"
-                    : "bg-red-600 hover:bg-red-700"
-                } text-white p-2 rounded-lg transition-colors`}
-              >
-                <FaTrash />
-              </button>
-            </div>
-          </li>
-        ))}
+                {contact.name}: {contact.number}
+              </span>
+              <div className="flex space-x-3">
+                <a
+                  href={`tel:${contact.number}`}
+                  className="p-3 bg-purple-600 text-white rounded-full shadow-md hover:bg-purple-700 transition-all"
+                >
+                  <FaPhone />
+                </a>
+                {isCustomContact && (
+                  <>
+                    <button
+                      onClick={() => onEdit(index - emergencyContacts.length)}
+                      className="p-3 bg-yellow-500 text-white rounded-full shadow-md hover:bg-yellow-600 transition-all"
+                    >
+                      <FaEdit />
+                    </button>
+                    <button
+                      onClick={() => onDelete(index - emergencyContacts.length)}
+                      className="p-3 bg-red-600 text-white rounded-full shadow-md hover:bg-red-700 transition-all"
+                    >
+                      <FaTrash />
+                    </button>
+                  </>
+                )}
+              </div>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
 };
 
-// Main Contacts Component
 const Contacts = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [customContacts, setCustomContacts] = useState([]);
@@ -86,141 +87,81 @@ const Contacts = () => {
   const [isEditing, setIsEditing] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
 
-  // Predefined emergency contacts
   const emergencyContacts = [
     { name: "Police", number: "100" },
     { name: "Ambulance", number: "102" },
     { name: "Women Helpline", number: "1091" },
   ];
 
-  // Load custom contacts from localStorage on component mount
   useEffect(() => {
     const savedContacts =
       JSON.parse(localStorage.getItem("customContacts")) || [];
     setCustomContacts(savedContacts);
   }, []);
 
-  // Save custom contacts to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem("customContacts", JSON.stringify(customContacts));
   }, [customContacts]);
 
-  // Combine predefined and custom contacts
-  const allContacts = [...emergencyContacts, ...customContacts];
-
-  // Filter contacts based on search query
-  const filteredContacts = allContacts.filter(
+  const filteredContacts = [...emergencyContacts, ...customContacts].filter(
     (contact) =>
       contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       contact.number.includes(searchQuery)
   );
 
-  // Add or update a contact
   const handleAddContact = () => {
     if (newContact.name && newContact.number) {
       if (isEditing !== null) {
-        // Update existing contact
         const updatedContacts = [...customContacts];
         updatedContacts[isEditing] = newContact;
         setCustomContacts(updatedContacts);
         setIsEditing(null);
       } else {
-        // Add new contact
         setCustomContacts([...customContacts, newContact]);
       }
       setNewContact({ name: "", number: "" });
     }
   };
 
-  // Edit a contact
-  const handleEditContact = (index) => {
-    const contactToEdit = customContacts[index];
-    setNewContact(contactToEdit);
-    setIsEditing(index);
-  };
-
-  // Delete a contact
-  const handleDeleteContact = (index) => {
-    const updatedContacts = customContacts.filter((_, i) => i !== index);
-    setCustomContacts(updatedContacts);
-  };
-
-  // Import contacts from a JSON file
-  const handleImportContacts = (event) => {
-    const file = event.target.files[0];
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const importedContacts = JSON.parse(e.target.result);
-      setCustomContacts(importedContacts);
-    };
-    reader.readAsText(file);
-  };
-
-  // Export contacts to a JSON file
-  const handleExportContacts = () => {
-    const data = JSON.stringify(customContacts, null, 2);
-    const blob = new Blob([data], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "emergency_contacts.json";
-    link.click();
-  };
-
-  // Toggle dark mode
-  const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode);
-    document.documentElement.classList.toggle("dark", !isDarkMode);
-  };
-
   return (
     <div
-      className={`min-h-screen ${
-        isDarkMode
-          ? "bg-gray-900 text-white"
-          : "bg-gradient-to-b from-purple-50 to-purple-100"
-      } p-6`}
+      className={`min-h-screen p-10 transition-all duration-300 ${
+        isDarkMode ? "bg-gray-900 text-white" : "bg-purple-50 text-gray-900"
+      }`}
     >
-      {/* Dark Mode Toggle (Top Left) */}
       <button
-        onClick={toggleDarkMode}
-        className={`fixed top-4 left-4 p-3 rounded-full shadow-lg ${
-          isDarkMode
-            ? "bg-purple-600 hover:bg-purple-700"
-            : "bg-white hover:bg-gray-100"
-        } transition-colors`}
+        onClick={() => setIsDarkMode(!isDarkMode)}
+        className="fixed top-4 left-4 p-3 rounded-full shadow-lg bg-purple-600 text-white hover:bg-purple-700 transition-all"
       >
-        {isDarkMode ? (
-          <FaSun className="text-white" />
-        ) : (
-          <FaMoon className="text-purple-800" />
-        )}
+        {isDarkMode ? <FaSun /> : <FaMoon />}
       </button>
 
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-3xl mx-auto">
         <h1
-          className={`text-4xl font-bold ${
-            isDarkMode ? "text-purple-400" : "text-purple-800"
-          } mb-8`}
+          className={`text-5xl font-extrabold text-center mb-10 ${
+            isDarkMode ? "text-purple-400" : "text-purple-700"
+          }`}
         >
           Emergency Contacts
         </h1>
 
-        {/* Search Bar */}
         <input
           type="text"
           placeholder="Search contacts..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className={`w-full p-3 border ${
+          className={`w-full p-4 rounded-2xl shadow-md mb-6 border transition-all focus:ring-2 focus:ring-purple-500 ${
             isDarkMode
-              ? "border-gray-700 bg-gray-800 text-white"
-              : "border-purple-300 bg-white"
-          } rounded-lg mb-6 focus:outline-none focus:ring-2 focus:ring-purple-500`}
+              ? "bg-gray-800 border-gray-700 text-white"
+              : "bg-white border-purple-300 text-gray-900"
+          }`}
         />
 
-        {/* Add/Edit Contact Form */}
-        <div className="mb-6">
+        <div
+          className={`p-6 rounded-2xl shadow-lg mb-6 transition-all ${
+            isDarkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"
+          }`}
+        >
           <input
             type="text"
             placeholder="Name"
@@ -228,11 +169,11 @@ const Contacts = () => {
             onChange={(e) =>
               setNewContact({ ...newContact, name: e.target.value })
             }
-            className={`w-full p-3 border ${
+            className={`w-full p-4 border rounded-xl mb-3 shadow-md transition-all ${
               isDarkMode
-                ? "border-gray-700 bg-gray-800 text-white"
-                : "border-purple-300 bg-white"
-            } rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-purple-500`}
+                ? "bg-gray-700 border-gray-600 text-white"
+                : "bg-white border-gray-300 text-gray-900"
+            }`}
           />
           <input
             type="text"
@@ -241,51 +182,28 @@ const Contacts = () => {
             onChange={(e) =>
               setNewContact({ ...newContact, number: e.target.value })
             }
-            className={`w-full p-3 border ${
+            className={`w-full p-4 border rounded-xl mb-3 shadow-md transition-all ${
               isDarkMode
-                ? "border-gray-700 bg-gray-800 text-white"
-                : "border-purple-300 bg-white"
-            } rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-purple-500`}
+                ? "bg-gray-700 border-gray-600 text-white"
+                : "bg-white border-gray-300 text-gray-900"
+            }`}
           />
           <button
             onClick={handleAddContact}
-            className={`w-full bg-purple-600 text-white p-3 rounded-lg hover:bg-purple-700 transition-colors`}
+            className="w-full p-4 rounded-xl bg-purple-600 text-white font-bold hover:bg-purple-700 transition-all shadow-md"
           >
             {isEditing !== null ? "Update Contact" : "Add Contact"}
           </button>
         </div>
 
-        {/* Import/Export Buttons */}
-        <div className="flex space-x-4 mb-6">
-          <input
-            type="file"
-            accept=".json"
-            onChange={handleImportContacts}
-            className="hidden"
-            id="import-contacts"
-          />
-          <label
-            htmlFor="import-contacts"
-            className={`flex items-center justify-center w-full bg-purple-600 text-white p-3 rounded-lg hover:bg-purple-700 transition-colors cursor-pointer`}
-          >
-            <FaUpload className="mr-2" />
-            Import Contacts
-          </label>
-          <button
-            onClick={handleExportContacts}
-            className={`flex items-center justify-center w-full bg-purple-600 text-white p-3 rounded-lg hover:bg-purple-700 transition-colors`}
-          >
-            <FaDownload className="mr-2" />
-            Export Contacts
-          </button>
-        </div>
-
-        {/* Display Contacts */}
         <EmergencyContacts
           contacts={filteredContacts}
           isDarkMode={isDarkMode}
-          onEdit={handleEditContact}
-          onDelete={handleDeleteContact}
+          onEdit={(index) => setIsEditing(index)}
+          onDelete={(index) =>
+            setCustomContacts(customContacts.filter((_, i) => i !== index))
+          }
+          emergencyContacts={emergencyContacts}
         />
       </div>
     </div>

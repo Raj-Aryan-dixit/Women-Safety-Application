@@ -7,6 +7,7 @@ import {
   FaLightbulb,
 } from "react-icons/fa";
 
+
 const QuickActions = ({ isDarkMode }) => {
   const [isSOSActive, setIsSOSActive] = useState(false);
   const [flashlightOn, setFlashlightOn] = useState(false);
@@ -96,19 +97,6 @@ const QuickActions = ({ isDarkMode }) => {
         >
           <FaExclamationTriangle className="text-2xl mb-2" />
           {isSOSActive ? "Cancel SOS" : "Emergency SOS"}
-        </button>
-
-        {/* Live Location Sharing */}
-        <button
-          onClick={shareLiveLocation}
-          className={`flex flex-col items-center justify-center p-4 rounded-lg ${
-            isDarkMode
-              ? "bg-purple-600 hover:bg-purple-700"
-              : "bg-purple-600 hover:bg-purple-700"
-          } text-white`}
-        >
-          <FaMapMarkerAlt className="text-2xl mb-2" />
-          Share Live Location
         </button>
 
         {/* Emergency Call */}

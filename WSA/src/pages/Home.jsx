@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import SOSButton from "../components/SOSButton";
 import LocationSharing from "../components/LocationSharing";
 import QuickActions from "../components/QuickActions";
@@ -12,9 +12,10 @@ import {
   FaMoon,
 } from "react-icons/fa";
 import SafetyScore from "../components/SafetyScore";
+import RecentAlerts from "../components/RecentAlerts";
 
 const Home = () => {
-  // Dummy data for emergency contacts, safety tips, and community alerts
+  // Dummy data for emergency contacts and safety tips
   const emergencyContacts = [
     { name: "Police", number: "100" },
     { name: "Ambulance", number: "102" },
@@ -28,14 +29,6 @@ const Home = () => {
     "Trust your instincts and stay aware of your surroundings.",
   ];
 
-  const communityAlerts = [
-    {
-      type: "Incident",
-      message: "Suspicious activity reported near Main Street.",
-    },
-    { type: "Warning", message: "Heavy traffic on Highway 101." },
-  ];
-
   // State for live location sharing
   const [isSharingLocation, setIsSharingLocation] = useState(false);
 
@@ -43,25 +36,45 @@ const Home = () => {
   const [safetyCheckInTime, setSafetyCheckInTime] = useState(null);
 
   // State for dark mode
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const savedDarkMode = localStorage.getItem("darkMode");
+    return savedDarkMode ? JSON.parse(savedDarkMode) : false;
+  });
 
   // State for safety score
   const [safetyScore, setSafetyScore] = useState(85); // Example score
 
   // Toggle dark mode
   const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode);
-    document.documentElement.classList.toggle("dark", !isDarkMode);
+    const newDarkMode = !isDarkMode;
+    setIsDarkMode(newDarkMode);
+    document.documentElement.classList.toggle("dark", newDarkMode);
+    localStorage.setItem("darkMode", JSON.stringify(newDarkMode));
   };
+
+  // Set initial dark mode state on component mount
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", isDarkMode);
+  }, []);
 
   // Handle live location sharing
   const handleLocationSharing = () => {
     setIsSharingLocation(!isSharingLocation);
-    alert(
-      isSharingLocation
-        ? "Stopped sharing location."
-        : "Started sharing location."
-    );
+    if (!isSharingLocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          const url = `https://www.google.com/maps?q=${latitude},${longitude}`;
+          alert(`Share this link with your trusted contacts: ${url}`);
+        },
+        (error) => {
+          console.error("Error fetching location:", error);
+          alert("Failed to fetch location. Please enable location services.");
+        }
+      );
+    } else {
+      alert("Location sharing stopped.");
+    }
   };
 
   // Handle safety check-in
@@ -72,7 +85,7 @@ const Home = () => {
 
   return (
     <div
-      className={`min-h-screen ${
+      className={`min-h-screen duration-300 ease-in-out ${
         isDarkMode
           ? "bg-gray-900 text-white"
           : "bg-gradient-to-b from-purple-50 to-purple-100"
@@ -96,10 +109,11 @@ const Home = () => {
 
       <div className="max-w-4xl mx-auto">
         {/* Safety Score Bar (Top) */}
-        <SafetyScore></SafetyScore>
+        <SafetyScore isDarkMode={isDarkMode} />
+
         {/* SOS Button and Location Sharing */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <QuickActions></QuickActions>
+          <QuickActions isDarkMode={isDarkMode} />
 
           {/* Emergency Contacts */}
           <div
@@ -127,61 +141,26 @@ const Home = () => {
           </div>
         </div>
 
-        {/* Safety Tips and Recent Alerts */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {/* Safety Tips */}
-          <div
+        {/* Location Sharing Button */}
+        <div className="flex justify-center mb-8">
+          <button
+            onClick={handleLocationSharing}
             className={`${
-              isDarkMode ? "bg-gray-800" : "bg-white"
-            } p-6 rounded-lg shadow-md`}
+              isDarkMode
+                ? "bg-purple-600 hover:bg-purple-700"
+                : "bg-purple-600 hover:bg-purple-700"
+            } text-white px-8 py-4 rounded-full shadow-lg transition duration-300 transform hover:scale-105`}
           >
-            <h2
-              className={`text-2xl font-semibold ${
-                isDarkMode ? "text-purple-400" : "text-purple-800"
-              } mb-4`}
-            >
-              Safety Tips
-            </h2>
-            <ul className="space-y-2 list-disc list-inside">
-              {safetyTips.map((tip, index) => (
-                <li
-                  key={index}
-                  className={isDarkMode ? "text-purple-300" : "text-purple-700"}
-                >
-                  {tip}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Recent Alerts */}
-          <div
-            className={`${
-              isDarkMode ? "bg-gray-800" : "bg-white"
-            } p-6 rounded-lg shadow-md`}
-          >
-            <h2
-              className={`text-2xl font-semibold ${
-                isDarkMode ? "text-purple-400" : "text-purple-800"
-              } mb-4`}
-            >
-              Recent Alerts
-            </h2>
-            <ul className="space-y-2">
-              {communityAlerts.map((alert, index) => (
-                <li
-                  key={index}
-                  className={isDarkMode ? "text-purple-300" : "text-purple-700"}
-                >
-                  <strong>{alert.type}:</strong> {alert.message}
-                </li>
-              ))}
-            </ul>
-          </div>
+            <FaMapMarkerAlt className="inline-block mr-2" />
+            {isSharingLocation ? "Stop Sharing" : "Share Live Location"}
+          </button>
         </div>
 
+        {/* Safety Tips and Recent Alerts */}
+        <RecentAlerts isDarkMode={isDarkMode} />
+
         {/* Profile Link */}
-        <div className="flex justify-center">
+        <div className="flex justify-center mt-8">
           <a
             href="/profile"
             className={`flex items-center ${
