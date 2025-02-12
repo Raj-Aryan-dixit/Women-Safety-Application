@@ -33,5 +33,6 @@ To run this project locally, follow these steps:
 
 ### **1️⃣ Clone the Repository**  
 ```sh
-git clone https://github.com/YOUR_GITHUB_USERNAME/Women-Safety-App.git
-cd Women-Safety-App
+[git clone https://github.com/YOUR_GITHUB_USERNAME/Women-Safety-App.git
+cd Women-Safety-App](https://github.com/Raj-Aryan-dixit/Women-Safety-Application)
+
