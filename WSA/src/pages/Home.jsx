@@ -85,27 +85,19 @@ const Home = () => {
 
   return (
     <div
-      className={`min-h-screen duration-300 ease-in-out ${
-        isDarkMode
-          ? "bg-gray-900 text-white"
-          : "bg-gradient-to-b from-purple-50 to-purple-100"
-      } p-6`}
+      className={`min-h-screen p-10 transition-all duration-300 ${
+        isDarkMode ? "bg-gray-900 text-white" : "bg-purple-50 text-gray-900"
+      }`}
     >
-      {/* Dark Mode Toggle (Top Left) */}
-      <button
-        onClick={toggleDarkMode}
-        className={`fixed top-4 left-4 p-3 rounded-full shadow-lg ${
-          isDarkMode
-            ? "bg-purple-600 hover:bg-purple-700"
-            : "bg-white hover:bg-gray-100"
-        } transition-colors`}
-      >
-        {isDarkMode ? (
-          <FaSun className="text-white" />
-        ) : (
-          <FaMoon className="text-purple-800" />
-        )}
-      </button>
+      {/* Dark Mode Toggle (Top Center) */}
+      <div className="fixed top-4 left-1/2 transform -translate-x-1/2">
+        <button
+          onClick={toggleDarkMode}
+          className="p-3 rounded-full shadow-lg bg-purple-600 text-white hover:bg-purple-700 transition-all"
+        >
+          {isDarkMode ? <FaSun /> : <FaMoon />}
+        </button>
+      </div>
 
       <div className="max-w-4xl mx-auto">
         {/* Safety Score Bar (Top) */}
@@ -117,14 +109,14 @@ const Home = () => {
 
           {/* Emergency Contacts */}
           <div
-            className={`${
-              isDarkMode ? "bg-gray-800" : "bg-white"
-            } p-6 rounded-lg shadow-md`}
+            className={`p-6 rounded-2xl shadow-xl transition-all duration-300 ${
+              isDarkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"
+            }`}
           >
             <h2
-              className={`text-2xl font-semibold ${
-                isDarkMode ? "text-purple-400" : "text-purple-800"
-              } mb-4`}
+              className={`text-2xl font-extrabold mb-4 ${
+                isDarkMode ? "text-purple-400" : "text-purple-700"
+              }`}
             >
               Emergency Contacts
             </h2>
@@ -132,9 +124,25 @@ const Home = () => {
               {emergencyContacts.map((contact, index) => (
                 <li
                   key={index}
-                  className={isDarkMode ? "text-purple-300" : "text-purple-700"}
+                  className={`flex justify-between items-center p-4 rounded-xl shadow-md transition-all duration-300 ${
+                    isDarkMode
+                      ? "bg-gray-700 hover:bg-gray-600"
+                      : "bg-gray-100 hover:bg-gray-200"
+                  }`}
                 >
-                  <strong>{contact.name}:</strong> {contact.number}
+                  <span
+                    className={`text-lg font-semibold ${
+                      isDarkMode ? "text-purple-300" : "text-purple-700"
+                    }`}
+                  >
+                    {contact.name}: {contact.number}
+                  </span>
+                  <a
+                    href={`tel:${contact.number}`}
+                    className="p-3 bg-purple-600 text-white rounded-full shadow-md hover:bg-purple-700 transition-all"
+                  >
+                    <FaPhone />
+                  </a>
                 </li>
               ))}
             </ul>
@@ -145,11 +153,7 @@ const Home = () => {
         <div className="flex justify-center mb-8">
           <button
             onClick={handleLocationSharing}
-            className={`${
-              isDarkMode
-                ? "bg-purple-600 hover:bg-purple-700"
-                : "bg-purple-600 hover:bg-purple-700"
-            } text-white px-8 py-4 rounded-full shadow-lg transition duration-300 transform hover:scale-105`}
+            className={`p-4 rounded-xl bg-purple-600 text-white font-bold hover:bg-purple-700 transition-all shadow-md`}
           >
             <FaMapMarkerAlt className="inline-block mr-2" />
             {isSharingLocation ? "Stop Sharing" : "Share Live Location"}

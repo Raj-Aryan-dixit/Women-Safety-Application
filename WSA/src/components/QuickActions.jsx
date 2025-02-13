@@ -69,8 +69,8 @@ const QuickActions = ({ isDarkMode }) => {
 
   return (
     <div
-      className={`p-6 rounded-lg shadow-md ${
-        isDarkMode ? "bg-gray-800" : "bg-white"
+      className={`transition-all duration-300 p-6 rounded-lg shadow-md ${
+        isDarkMode ? "bg-gray-800" : "bg-white "
       }`}
     >
       <h2

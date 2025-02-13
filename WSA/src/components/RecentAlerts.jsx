@@ -55,7 +55,7 @@ const RecentAlerts = ({ isDarkMode }) => {
     <div
       className={`${
         isDarkMode ? "bg-gray-800" : "bg-white"
-      } p-6 rounded-lg shadow-md mb-8`}
+      } p-6 rounded-lg shadow-md mb-8 transition-all duration-300`}
     >
       <h2
         className={`text-2xl font-semibold ${
