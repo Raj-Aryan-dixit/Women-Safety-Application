@@ -11,244 +11,262 @@ import axios from "axios";
 const SafetyScore = ({ isDarkMode }) => {
   const [safetyScore, setSafetyScore] = useState(0);
   const [isDaytime, setIsDaytime] = useState(true);
-  const [criminalRate, setCriminalRate] = useState(0);
+  const [crimeImpact, setCrimeImpact] = useState(0);
   const [weatherCondition, setWeatherCondition] = useState("sunny");
   const [crowdDensity, setCrowdDensity] = useState("medium");
   const [lightingCondition, setLightingCondition] = useState("good");
+  const [userState, setUserState] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  // Replace with your API keys
+  const WEATHER_API_KEY = "YOUR_OPENWEATHERMAP_API_KEY"; // Get from OpenWeatherMap
+  const GOOGLE_API_KEY = "YOUR_GOOGLE_API_KEY"; // Get from Google Cloud Console
+
+  // Fetch crime impact data
+  const fetchCrimeImpact = async (state) => {
+    try {
+      const response = await axios.get("http://localhost:5000/api/crime-data");
+      const stateCrimeData = response.data.find((item) => item.State === state);
+      setCrimeImpact(stateCrimeData ? stateCrimeData.CrimeImpact : 0);
+    } catch (error) {
+      console.error("Error fetching crime data:", error);
+      setCrimeImpact(0); // Default fallback
+    }
+  };
 
   // Fetch weather data
   const fetchWeatherData = async (latitude, longitude) => {
     try {
       const response = await axios.get(
-        `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${
-          import.meta.env.VITE_OPENWEATHERMAP_API_KEY
-        }`
+        `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${WEATHER_API_KEY}&units=metric`
       );
       const weather = response.data.weather[0].main.toLowerCase();
-      setWeatherCondition(weather);
+      if (weather.includes("rain")) setWeatherCondition("rain");
+      else if (weather.includes("storm") || weather.includes("thunder"))
+        setWeatherCondition("storm");
+      else setWeatherCondition("sunny");
     } catch (error) {
       console.error("Error fetching weather data:", error);
+      setWeatherCondition("sunny"); // Default fallback
     }
   };
 
-  // Fetch crime data
-  const fetchCrimeData = async (latitude, longitude) => {
-    try {
-      const response = await axios.get(
-        `https://api.crimeometer.com/v1/incidents/raw-data?lat=${latitude}&lon=${longitude}&distance=5km`,
-        {
-          headers: {
-            "x-api-key": import.meta.env.VITE_CRIMEOMETER_API_KEY,
-          },
-        }
-      );
-      const crimeCount = response.data.incidents.length;
-      setCriminalRate(crimeCount > 10 ? 30 : 10); // Example logic
-    } catch (error) {
-      console.error("Error fetching crime data:", error);
-    }
-  };
-
-  // Fetch crowd density data
+  // Fetch crowd density (using Google Places API as a proxy)
   const fetchCrowdDensity = async (latitude, longitude) => {
     try {
       const response = await axios.get(
-        `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=500&key=${
-          import.meta.env.VITE_GOOGLE_PLACES_API_KEY
-        }`
+        `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=500&key=${GOOGLE_API_KEY}`
       );
-      const places = response.data.results;
-      const density =
-        places.length > 20 ? "high" : places.length > 10 ? "medium" : "low";
-      setCrowdDensity(density);
+      const places = response.data.results.length;
+      if (places > 20) setCrowdDensity("high");
+      else if (places > 5) setCrowdDensity("medium");
+      else setCrowdDensity("low");
     } catch (error) {
       console.error("Error fetching crowd density:", error);
+      setCrowdDensity("medium"); // Default fallback
     }
-  };
-
-  // Fetch lighting data (mock implementation)
-  const fetchLightingData = async (latitude, longitude) => {
-    // Mock logic: Assume lighting is poor at night
-    const currentHour = new Date().getHours();
-    setLightingCondition(
-      currentHour >= 18 || currentHour < 6 ? "poor" : "good"
-    );
   };
 
   // Fetch all data based on user's location
   const fetchData = async () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
+        async (position) => {
           const { latitude, longitude } = position.coords;
-          fetchWeatherData(latitude, longitude);
-          fetchCrimeData(latitude, longitude);
-          fetchCrowdDensity(latitude, longitude);
-          fetchLightingData(latitude, longitude);
+          try {
+            // Get state from reverse geocoding
+            const geoResponse = await axios.get(
+              `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+            );
+            const state = geoResponse.data.principalSubdivision;
+            setUserState(state);
+
+            // Fetch all data concurrently
+            await Promise.all([
+              fetchCrimeImpact(state),
+              fetchWeatherData(latitude, longitude),
+              fetchCrowdDensity(latitude, longitude),
+            ]);
+
+            // Infer lighting condition
+            const currentHour = new Date().getHours();
+            setIsDaytime(currentHour >= 6 && currentHour < 18);
+            setLightingCondition(
+              isDaytime && weatherCondition === "sunny"
+                ? "good"
+                : isDaytime
+                ? "moderate"
+                : "poor"
+            );
+          } catch (error) {
+            console.error("Error fetching data:", error);
+          } finally {
+            setLoading(false);
+          }
         },
         (error) => {
           console.error("Error getting location:", error);
+          setLoading(false);
         }
       );
     } else {
       console.error("Geolocation is not supported by this browser.");
+      setLoading(false);
     }
   };
 
-  // Calculate safety score
   useEffect(() => {
     const calculateSafetyScore = () => {
-      let score = 100 - criminalRate;
-
-      if (!isDaytime) {
-        score -= 20;
-      }
-
-      if (weatherCondition === "rain") {
-        score -= 10;
-      } else if (weatherCondition === "storm") {
-        score -= 20;
-      }
-
-      if (crowdDensity === "low") {
-        score -= 15;
-      } else if (crowdDensity === "medium") {
-        score -= 5;
-      }
-
-      if (lightingCondition === "poor") {
-        score -= 10;
-      }
-
+      let score = 100 - crimeImpact;
+      if (!isDaytime) score -= 20;
+      if (weatherCondition === "rain") score -= 10;
+      if (weatherCondition === "storm") score -= 20;
+      if (crowdDensity === "low") score -= 15;
+      if (lightingCondition === "poor") score -= 10;
+      if (lightingCondition === "moderate") score -= 5;
       score = Math.max(0, Math.min(100, score));
       setSafetyScore(score);
     };
-
     calculateSafetyScore();
   }, [
-    criminalRate,
+    crimeImpact,
     isDaytime,
     weatherCondition,
     crowdDensity,
     lightingCondition,
   ]);
 
-  // Determine if it's daytime or nighttime
-  useEffect(() => {
-    const currentHour = new Date().getHours();
-    setIsDaytime(currentHour >= 6 && currentHour < 18);
-  }, []);
-
-  // Fetch data on component mount
   useEffect(() => {
     fetchData();
   }, []);
 
-  // Get safety level based on score
-  const getSafetyLevel = (score) => {
-    if (score >= 80) return "Very Safe";
-    if (score >= 60) return "Safe";
-    if (score >= 40) return "Moderate";
-    if (score >= 20) return "Risky";
-    return "Very Risky";
-  };
-
-  // Get safety bar color based on score
-  const getSafetyBarColor = (score) => {
-    if (score >= 80) return "bg-green-600";
-    if (score >= 60) return "bg-yellow-600";
-    if (score >= 40) return "bg-orange-600";
-    if (score >= 20) return "bg-red-600";
-    return "bg-red-800";
-  };
-
   return (
     <div
-      className={`${ 
-        isDarkMode ? "bg-gray-800" : "bg-white"
-      } p-6 rounded-lg shadow-md mb-5 `}
+      className={`p-8 rounded-3xl shadow-xl transition-all duration-500 backdrop-blur-lg ${
+        isDarkMode
+          ? "bg-gray-800/90 border border-gray-700/50 text-white"
+          : "bg-white/95 border border-gray-100 text-gray-900"
+      }`}
     >
       <h2
-        className={`text-2xl font-semibold ${
-          isDarkMode ? "text-purple-400" : "text-purple-800"
-        } mb-4`}
+        className={`text-3xl font-extrabold mb-8 ${
+          isDarkMode ? "text-purple-300" : "text-indigo-700"
+        }`}
       >
         Your Safety Score
       </h2>
 
-      {/* Safety Score Bar */}
-      <div className="w-full bg-gray-200 rounded-full h-4 mb-4">
-        <div
-          className={`h-4 rounded-full ${getSafetyBarColor(safetyScore)}`}
-          style={{ width: `${safetyScore}%` }}
-        ></div>
-      </div>
-
-      {/* Safety Score Details */}
-      <div className="text-center">
-        <p
-          className={`text-4xl font-bold ${
-            isDarkMode ? "text-purple-400" : "text-purple-800"
-          } mb-2`}
-        >
-          {safetyScore}%
+      {loading ? (
+        <p className="text-center text-lg font-medium animate-pulse">
+          Calculating Safety Score...
         </p>
-        <p
-          className={`text-lg ${
-            isDarkMode ? "text-purple-300" : "text-purple-700"
-          } mb-4`}
-        >
-          Safety Level:{" "}
-          <span
-            className={`font-semibold ${
-              safetyScore >= 80
-                ? "text-green-600"
-                : safetyScore >= 60
-                ? "text-yellow-600"
-                : safetyScore >= 40
-                ? "text-orange-600"
-                : "text-red-600"
+      ) : (
+        <>
+          <div className="w-full bg-gray-300/50 rounded-full h-5 mb-6 overflow-hidden">
+            <div
+              className={`h-5 rounded-full transition-all duration-700 ${
+                safetyScore >= 80
+                  ? "bg-gradient-to-r from-green-500 to-emerald-500"
+                  : safetyScore >= 60
+                  ? "bg-gradient-to-r from-yellow-500 to-amber-500"
+                  : safetyScore >= 40
+                  ? "bg-gradient-to-r from-orange-500 to-amber-600"
+                  : "bg-gradient-to-r from-red-500 to-rose-600"
+              }`}
+              style={{ width: `${safetyScore}%` }}
+            ></div>
+          </div>
+
+          <div className="text-center">
+            <p
+              className={`text-5xl font-extrabold ${
+                isDarkMode ? "text-purple-200" : "text-indigo-800"
+              } mb-3`}
+            >
+              {safetyScore}%
+            </p>
+            <p
+              className={`text-xl font-medium ${
+                isDarkMode ? "text-gray-300" : "text-gray-700"
+              } mb-6`}
+            >
+              Safety Level:{" "}
+              <span
+                className={`font-semibold ${
+                  safetyScore >= 80
+                    ? "text-green-500"
+                    : safetyScore >= 60
+                    ? "text-yellow-500"
+                    : safetyScore >= 40
+                    ? "text-orange-500"
+                    : "text-red-500"
+                }`}
+              >
+                {safetyScore >= 80
+                  ? "Very Safe"
+                  : safetyScore >= 60
+                  ? "Safe"
+                  : safetyScore >= 40
+                  ? "Moderate"
+                  : safetyScore >= 20
+                  ? "Risky"
+                  : "Very Risky"}
+              </span>
+            </p>
+            <p
+              className={`text-lg flex items-center justify-center ${
+                isDarkMode ? "text-purple-300" : "text-indigo-600"
+              }`}
+            >
+              {isDaytime ? (
+                <>
+                  <FaSun className="mr-2 text-2xl" /> Daytime
+                </>
+              ) : (
+                <>
+                  <FaMoon className="mr-2 text-2xl" /> Nighttime
+                </>
+              )}
+            </p>
+          </div>
+
+          <div
+            className={`mt-8 text-sm ${
+              isDarkMode ? "text-gray-300" : "text-gray-600"
             }`}
           >
-            {getSafetyLevel(safetyScore)}
-          </span>
-        </p>
-        <p className={isDarkMode ? "text-purple-300" : "text-gray-600"}>
-          {isDaytime ? (
-            <span className="flex items-center justify-center">
-              <FaSun className="mr-2" /> Daytime
-            </span>
-          ) : (
-            <span className="flex items-center justify-center">
-              <FaMoon className="mr-2" /> Nighttime
-            </span>
-          )}
-        </p>
-      </div>
-
-      {/* Additional Information */}
-      <div
-        className={`mt-6 text-sm ${
-          isDarkMode ? "text-purple-300" : "text-gray-600"
-        }`}
-      >
-        <p>Your safety score is calculated based on:</p>
-        <ul className="list-disc list-inside mt-2">
-          <li>
-            Criminal Rate:{" "}
-            <span className="font-semibold">{criminalRate}%</span>
-          </li>
-          <li>
-            Weather: <span className="font-semibold">{weatherCondition}</span>
-          </li>
-          <li>
-            Crowd Density: <span className="font-semibold">{crowdDensity}</span>
-          </li>
-          <li>
-            Lighting: <span className="font-semibold">{lightingCondition}</span>
-          </li>
-        </ul>
-      </div>
+            <p className="font-medium">Safety score factors:</p>
+            <ul className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <li className="flex items-center">
+                <FaUsers className="mr-2 text-indigo-500" />
+                Crime Impact:{" "}
+                <span className="font-semibold ml-1">{crimeImpact}</span>
+              </li>
+              <li className="flex items-center">
+                <FaCloudRain className="mr-2 text-indigo-500" />
+                Weather:{" "}
+                <span className="font-semibold ml-1 capitalize">
+                  {weatherCondition}
+                </span>
+              </li>
+              <li className="flex items-center">
+                <FaUsers className="mr-2 text-indigo-500" />
+                Crowd Density:{" "}
+                <span className="font-semibold ml-1 capitalize">
+                  {crowdDensity}
+                </span>
+              </li>
+              <li className="flex items-center">
+                <FaLightbulb className="mr-2 text-indigo-500" />
+                Lighting:{" "}
+                <span className="font-semibold ml-1 capitalize">
+                  {lightingCondition}
+                </span>
+              </li>
+            </ul>
+          </div>
+        </>
+      )}
     </div>
   );
 };

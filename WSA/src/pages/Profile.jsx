@@ -13,6 +13,9 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [profilePic, setProfilePic] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [latitude, setLatitude] = useState(null);
+  const [longitude, setLongitude] = useState(null);
+  const [locationError, setLocationError] = useState(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -36,9 +39,44 @@ const Profile = () => {
       }
     };
     fetchProfile();
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setLatitude(position.coords.latitude);
+          setLongitude(position.coords.longitude);
+          setLocationError(null);
+        },
+        (error) => {
+          let errorMessage = "Unable to retrieve location. Please enable GPS.";
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage =
+                "Location access denied. Please enable permissions.";
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage = "Location information is unavailable.";
+              break;
+            case error.TIMEOUT:
+              errorMessage = "The request to get location timed out.";
+              break;
+            default:
+              errorMessage = "An unknown error occurred.";
+          }
+          console.error("Geolocation error:", error);
+          setLocationError(errorMessage);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0,
+        }
+      );
+    } else {
+      setLocationError("Geolocation is not supported by this browser.");
+    }
   }, []);
 
-  // Handle Profile Picture Upload
   const handleImageUpload = async (event) => {
     const file = event.target.files[0];
     if (!file || !user) return;
@@ -50,7 +88,7 @@ const Profile = () => {
 
     try {
       const response = await axios.post(
-        `http://localhost:5000/api/auth/upload-profile-picture/${user._id}`, // Pass user ID
+        `http://localhost:5000/api/auth/upload-profile-picture/${user._id}`,
         formData,
         {
           headers: {
@@ -68,31 +106,37 @@ const Profile = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-purple-50 to-purple-100 p-6">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-4xl font-bold text-purple-800 mb-8">Profile</h1>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-blue-100 p-8">
+      <div className="mt-16 max-w-4xl mx-auto">
+        <h1 className="text-5xl font-extrabold text-indigo-900 mb-10 text-center tracking-tight">
+          Your Profile
+        </h1>
 
         {loading ? (
-          <p className="text-gray-700">Loading...</p>
+          <p className="text-center text-gray-600 text-lg animate-pulse font-medium">
+            Loading Profile...
+          </p>
         ) : user ? (
-          <div className="bg-white p-8 rounded-lg shadow-lg">
-            {/* Profile Picture Upload Section */}
-            <div className="flex flex-col items-center mb-8">
-              <div className="relative">
-                <label htmlFor="profilePicUpload" className="cursor-pointer">
+          <div className="bg-white/95 backdrop-blur-lg p-10 rounded-3xl shadow-xl transition-all duration-500 hover:shadow-2xl">
+            <div className="flex flex-col items-center mb-10">
+              <div className="relative group">
+                <label
+                  htmlFor="profilePicUpload"
+                  className="cursor-pointer block"
+                >
                   {profilePic ? (
                     <img
                       src={`http://localhost:5000${profilePic}`}
                       alt="Profile"
-                      className="w-32 h-32 rounded-full border-4 border-purple-600 object-cover"
+                      className="w-44 h-44 rounded-full border-4 border-indigo-500 object-cover shadow-md group-hover:scale-105 transition-transform duration-300"
                     />
                   ) : (
-                    <div className="w-32 h-32 bg-purple-100 rounded-full flex items-center justify-center">
-                      <FaUser className="text-5xl text-purple-600" />
+                    <div className="w-44 h-44 bg-indigo-100 rounded-full flex items-center justify-center border-4 border-indigo-300 shadow-md group-hover:scale-105 transition-transform duration-300">
+                      <FaUser className="text-7xl text-indigo-500" />
                     </div>
                   )}
-                  <div className="absolute bottom-2 right-2 bg-purple-600 p-2 rounded-full">
-                    <FaCamera className="text-white text-lg" />
+                  <div className="absolute bottom-3 right-3 bg-indigo-600 p-3 rounded-full shadow-lg group-hover:bg-indigo-700 transition-all duration-300 transform group-hover:scale-110">
+                    <FaCamera className="text-white text-xl" />
                   </div>
                 </label>
                 <input
@@ -104,56 +148,51 @@ const Profile = () => {
                 />
               </div>
               {uploading && (
-                <p className="text-purple-600 mt-2">Uploading...</p>
+                <p className="text-indigo-600 mt-3 text-sm font-medium animate-pulse">
+                  Uploading Image...
+                </p>
               )}
             </div>
 
-            <div className="space-y-4">
-              <div className="flex items-center space-x-4">
-                <FaEnvelope className="text-purple-600" />
-                <p className="text-gray-700">
-                  <strong>Email:</strong> {user.email}
+            <div className="space-y-6">
+              <div className="flex items-center space-x-5 p-5 bg-indigo-50/80 rounded-xl shadow-sm hover:bg-indigo-100/90 transition-all duration-300">
+                <FaMapMarkerAlt className="text-indigo-600 text-2xl flex-shrink-0" />
+                <p className="text-gray-800 text-lg">
+                  <strong className="font-semibold">GPS Location:</strong>{" "}
+                  {latitude && longitude ? (
+                    <span>
+                      Lat: {latitude.toFixed(4)}, Lng: {longitude.toFixed(4)}
+                    </span>
+                  ) : (
+                    <span className="text-gray-600 italic">
+                      {locationError || "Fetching location..."}
+                    </span>
+                  )}
                 </p>
               </div>
 
-              <div className="flex items-center space-x-4">
-                <FaPhone className="text-purple-600" />
-                <p className="text-gray-700">
-                  <strong>Phone:</strong> {user.phone || "Not provided"}
+              <div className="flex items-center space-x-5 p-5 bg-indigo-50/80 rounded-xl shadow-sm hover:bg-indigo-100/90 transition-all duration-300">
+                <FaEnvelope className="text-indigo-600 text-2xl flex-shrink-0" />
+                <p className="text-gray-800 text-lg">
+                  <strong className="font-semibold">Email:</strong> {user.email}
                 </p>
               </div>
 
-              <div className="flex items-center space-x-4">
-                <FaMapMarkerAlt className="text-purple-600" />
-                <p className="text-gray-700">
-                  <strong>Location:</strong>{" "}
-                  {typeof user?.location === "object" &&
-                  user.location?.coordinates
-                    ? `Lat: ${user.location.coordinates[1]}, Lng: ${user.location.coordinates[0]}`
-                    : user?.location || "Not provided"}
+              <div className="flex items-center space-x-5 p-5 bg-indigo-50/80 rounded-xl shadow-sm hover:bg-indigo-100/90 transition-all duration-300">
+                <FaPhone className="text-indigo-600 text-2xl flex-shrink-0" />
+                <p className="text-gray-800 text-lg">
+                  <strong className="font-semibold">Phone:</strong>{" "}
+                  {user.phone || (
+                    <span className="text-gray-600 italic">Not provided</span>
+                  )}
                 </p>
               </div>
-            </div>
-
-            <div className="mt-8">
-              <h3 className="text-xl font-bold text-purple-800 mb-4">
-                Emergency Contacts
-              </h3>
-              <ul className="space-y-2">
-                <li className="text-gray-700">
-                  <strong>Police:</strong> 100
-                </li>
-                <li className="text-gray-700">
-                  <strong>Ambulance:</strong> 102
-                </li>
-                <li className="text-gray-700">
-                  <strong>Women Helpline:</strong> 1091
-                </li>
-              </ul>
             </div>
           </div>
         ) : (
-          <p className="text-gray-700">No user data found.</p>
+          <p className="text-center text-gray-600 text-lg font-medium">
+            No user data found.
+          </p>
         )}
       </div>
     </div>
